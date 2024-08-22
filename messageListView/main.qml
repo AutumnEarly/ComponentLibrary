@@ -28,7 +28,7 @@ Window {
                     TextField {
                         Keys.onReturnPressed: {
                             messageQueueView.insert(text,{
-                                                     title: "这是一个标题",
+                                                     title: "这是一个消息的标题",
                                                      message: "这是第 " + messageQueueView.count +" 条消息"
                                                  })
                         }
@@ -57,19 +57,19 @@ Window {
                     Button {
                         text: "打开"
                         onClicked: {
-                            messageQueueView.open()
+                            messageQueueView.show()
                         }
                         Keys.onReturnPressed: {
-                            messageQueueView.open()
+                            messageQueueView.show()
                         }
                     }
                     Button {
                         text: "关闭"
                         onClicked: {
-                            messageQueueView.close()
+                            messageQueueView.hide()
                         }
                         Keys.onReturnPressed: {
-                            messageQueueView.close()
+                            messageQueueView.hide()
                         }
                     }
                 }
@@ -83,7 +83,37 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 20
+            Component.onCompleted: {
 
+            }
+        }
+    }
+    Timer {
+        property var data: [
+            {
+                title: "这是一个消息的标题",
+                message: "这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息"
+            },
+            {
+                title: "这是一个消息的标题",
+                message: "这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息"
+            },
+            {
+                title: "这是一个消息的标题",
+                message: "好吧，这是一一一条消息"
+            },
+        ]
+        property int current: 0
+        interval: 400
+        onTriggered: {
+            if(current < data.length) {
+                messageQueueView.insert(0,data[current]);
+                current ++;
+                start();
+            }
+        }
+        Component.onCompleted: {
+            start()
         }
     }
 }

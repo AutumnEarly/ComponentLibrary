@@ -11,63 +11,77 @@ Item {
     property real margin: 20
 
     property Component messageItemDelegate: messageDelegate
-    property Component background: Rectangle {
-        anchors.fill: parent
-        color: "#20000000"
-    }
+    property Component background: backgourndCmp
     property ListModel model: ListModel {}
 
     property alias itemsSpacing: messageView.spacing
     property alias count: messageView.count
 
+    signal added()
+    signal removed()
+
     width: 260
     height: 400
 
-    state: "open"
+    state: "show"
     states: [
         State {
-            name: "close"
+            name: "hide"
             PropertyChanges {
-                target: contentItem
+                target: content
                 opacity: 0
                 x: root.width
             }
             PropertyChanges {
-                target: openIcon
+                target: showIcon
                 parent: root
-                anchors.right: contentItem.left
-                anchors.verticalCenter: contentItem.verticalCenter
+                anchors.right: content.left
+                anchors.verticalCenter: content.verticalCenter
+            }
+            PropertyChanges {
+                target: messageView
+                interactive: false
             }
         },
         State {
-            name: "open"
+            name: "show"
             PropertyChanges {
-                target: contentItem
+                target: content
                 opacity: 1
                 x: 0
             }
             PropertyChanges {
-                target: openIcon
+                target: showIcon
                 parent: root
-                anchors.right: contentItem.left
-                anchors.verticalCenter: contentItem.verticalCenter
+                anchors.right: content.left
+                anchors.verticalCenter: content.verticalCenter
+            }
+            PropertyChanges {
+                target: messageView
+                interactive: true
             }
         }
     ]
     transitions: [
         Transition {
-            from: "close"
-            to: "open"
+            from: "hide"
+            to: "show"
             SequentialAnimation {
+                ScriptAction {
+                    script: {
+                        messageView.parent = content
+                        console.log("AA")
+                    }
+                }
                 ParallelAnimation {
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "x"
                         duration: 400
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "opacity"
                         duration: 400
                         easing.type: Easing.InOutQuad
@@ -77,21 +91,27 @@ Item {
 
         },
         Transition {
-            from: "open"
-            to: "close"
+            from: "show"
+            to: "hide"
             SequentialAnimation {
                 ParallelAnimation {
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "x"
                         duration: 400
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "opacity"
                         duration: 400
                         easing.type: Easing.InOutQuad
+                    }
+                }
+                ScriptAction {
+                    script: {
+                        messageView.parent = root
+                        console.log("AA")
                     }
                 }
             }
@@ -99,13 +119,13 @@ Item {
         }
     ]
 
+
     // 主体内容
     Item {
-        id: contentItem
+        id: content
         z: 0
         width: parent.width
         height: parent.height
-        clip: true
         // 背景加载
         Background {
             id: backgroundLoader
@@ -114,12 +134,11 @@ Item {
         MessageView {
             id: messageView
         }
-
     }
 
     // 打开关闭按钮
     ColorImage {
-        id: openIcon
+        id: showIcon
         z: 4
         width: 20
         height: width
@@ -130,12 +149,21 @@ Item {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                if(root.state === "open") {
-                    root.close()
+                if(root.state === "show") {
+                    root.hide()
                 } else {
-                    root.open()
+                    root.show()
                 }
             }
+        }
+    }
+
+    Component {
+        id: backgourndCmp
+        Rectangle {
+           id: background
+           anchors.fill: parent
+           color: "#2F000000"
         }
     }
 
@@ -143,12 +171,24 @@ Item {
     Component {
         id: messageDelegate
         Rectangle {
+            id: msgItem
             x: (messageView.width - width) / 2
             width: messageView.width - root.margin*2
             height: 80
             radius: 8
+            opacity: 1
+//            visible: opacity
             color: "#2F000000"
             clip: true
+
+            Behavior on opacity {
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 400
+                    easing.type: Easing.InOutQuad
+                }
+            }
+
             Row {
                 width: parent.width - 20
                 height: parent.height - 20
@@ -215,15 +255,16 @@ Item {
                 }
             }
         }
+
     }
 
 
-    function open() {
-        root.state = "open"
+    function show() {
+        root.state = "show"
     }
 
-    function close() {
-        root.state = "close"
+    function hide() {
+        root.state = "hide"
     }
 
     function insert(index,info) {
@@ -235,6 +276,7 @@ Item {
                         message: message,
                         iconSource: iconSource
                      })
+        root.added()
     }
 
     function remove(index,count = 1) {

@@ -6,8 +6,8 @@ import QtQuick 2.15
 ListView {
     id: listview
 
-    width: parent.width
-    height: parent.height
+    width: content.width
+    height: content.height
     spacing: 10
     anchors.horizontalCenter: parent.horizontalCenter
     verticalLayoutDirection: ListView.BottomToTop
@@ -19,11 +19,14 @@ ListView {
     add: Transition {
         id: addTrans
         onRunningChanged: {
-            console.log("addTran: " + ViewTransition.item)
+//            console.log("addTran: " + ViewTransition.item)
         }
-
+        ScriptAction { // 动态添加一个定时器 延时设置透明度
+            script: {
+                addDelayHide(addTrans.ViewTransition.item)
+            }
+        }
         ParallelAnimation {
-
             NumberAnimation {
                 property: "opacity"
                 from: 0
@@ -52,13 +55,23 @@ ListView {
         id: dispTran
         onRunningChanged: {
             if(running) {
-                console.log("addDispTran: " + ViewTransition.targetIndexes)
+//                console.log("addDispTran: " + ViewTransition.targetItems)
             }
         }
         // 如果数据插入太快会导致动画被中断 然后动画控制的属性值无法回到正确的值，在这里手动回到正确的值
-        PropertyAction { property: "opacity"; value: 1;}
+        ScriptAction {
+            script: {
+                let item = dispTran.ViewTransition.item
+                if(root.state === "show") {
+                    item.opacity = 1
+                }
+                if(root.state === "hide" && item.state === "NONEW") {
+                    item.opacity = 0
+                    console.log(item.children)
+                }
+            }
+        }
         PropertyAction { property: "x"; value: (listview.width - dispTran.ViewTransition.item.width) / 2;}
-
 
         NumberAnimation {
             property: "y"
@@ -72,7 +85,7 @@ ListView {
     remove: Transition {
         id: removeTran
         onRunningChanged: {
-            console.log("removeTran: " + ViewTransition.targetIndexes)
+//            console.log("removeTran: " + ViewTransition.targetItems)
         }
         ParallelAnimation {
             NumberAnimation {
@@ -96,7 +109,7 @@ ListView {
     removeDisplaced: Transition {
         id: removeDispTran
         onRunningChanged: {
-            console.log("removeDispTran: " + ViewTransition.targetIndexes)
+//            console.log("removeDispTran: " + ViewTransition.targetItems)
         }
         ParallelAnimation {
             NumberAnimation {
@@ -118,9 +131,50 @@ ListView {
             easing.type: Easing.OutCubic
         }
     }
-
+    // 视图滑块
     ScroolBar.vertical: ScroolBar {
 
+    }
+    /*
+        消息视图显示时 使所有加载项显示
+        消息视图隐藏时 使所有加载项隐藏
+    */
+    Connections {
+        target: root
+        function onStateChanged() {
+            for(let i = 0; i < contentItem.children.length;i++) {
+                let item = contentItem.children[i]
+                if(root.state === "show") {
+                    item.opacity = 1
+                } else if(root.state === "hide"){
+                    item.opacity = 0
+                }
+            }
+        }
+    }
+
+    /*
+        添加延时定时器
+        如果视图隐藏时，只显示新添加的消息
+    */
+    function addDelayHide(item) {
+        if(root.state === "show") return
+
+//        let item = contentItem.children[contentItem.children.length-1]
+        let timer = Qt.createQmlObject("
+                            import QtQml
+                            Timer {}
+        ",item)
+        let callBack = () => {
+            if(root.state === "show") return
+            timer.parent.opacity = 0
+            timer.parent.state = "NONEW"
+            console.log("timer: " + timer.parent)
+        }
+
+        timer.interval = 3000
+        timer.triggered.connect(callBack)
+        timer.start()
     }
 
 }

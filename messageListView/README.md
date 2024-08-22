@@ -1,3 +1,4 @@
+
 [TOC]
 
 ## 开发环境
@@ -15,9 +16,7 @@
 ![2024-08-21 14-28-39_converted](images/2024-08-21 14-28-39_converted.gif)
 
 ## 如何使用
-
 直接导入messageQueueView文件夹即可
-
 ## 代码
 
 这里的代码只包括组件的代码，不包括整个项目的代码。
@@ -49,6 +48,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import "./messageQueueView"
 
 Window {
     width: 640
@@ -75,7 +75,7 @@ Window {
                     TextField {
                         Keys.onReturnPressed: {
                             messageQueueView.insert(text,{
-                                                     title: "这是一个标题",
+                                                     title: "这是一个消息的标题",
                                                      message: "这是第 " + messageQueueView.count +" 条消息"
                                                  })
                         }
@@ -91,15 +91,37 @@ Window {
                         }
                     }
                 }
-                Button {
-                    text: "清空消息"
-                    onClicked: {
-                        messageQueueView.clear()
+                Row {
+                    Button {
+                        text: "清空消息"
+                        onClicked: {
+                            messageQueueView.clear()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.model.clear()
+                        }
                     }
-                    Keys.onReturnPressed: {
-                        messageQueueView.model.clear()
+                    Button {
+                        text: "打开"
+                        onClicked: {
+                            messageQueueView.show()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.show()
+                        }
+                    }
+                    Button {
+                        text: "关闭"
+                        onClicked: {
+                            messageQueueView.hide()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.hide()
+                        }
                     }
                 }
+
+
             }
         }
 
@@ -108,9 +130,41 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 20
+            Component.onCompleted: {
+
+            }
+        }
+    }
+    Timer {
+        property var data: [
+            {
+                title: "这是一个消息的标题",
+                message: "这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息,这是一个消息"
+            },
+            {
+                title: "这是一个消息的标题",
+                message: "这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息，这不是一个消息"
+            },
+            {
+                title: "这是一个消息的标题",
+                message: "好吧，这是一一一条消息"
+            },
+        ]
+        property int current: 0
+        interval: 400
+        onTriggered: {
+            if(current < data.length) {
+                messageQueueView.insert(0,data[current]);
+                current ++;
+                start();
+            }
+        }
+        Component.onCompleted: {
+            start()
         }
     }
 }
+
 ```
 
 ### MessageView.qml
@@ -126,8 +180,8 @@ import QtQuick 2.15
 ListView {
     id: listview
 
-    width: parent.width
-    height: parent.height
+    width: content.width
+    height: content.height
     spacing: 10
     anchors.horizontalCenter: parent.horizontalCenter
     verticalLayoutDirection: ListView.BottomToTop
@@ -139,11 +193,14 @@ ListView {
     add: Transition {
         id: addTrans
         onRunningChanged: {
-            console.log("addTran: " + ViewTransition.item)
+//            console.log("addTran: " + ViewTransition.item)
         }
-
+        ScriptAction { // 动态添加一个定时器 延时设置透明度
+            script: {
+                addDelayHide(addTrans.ViewTransition.item)
+            }
+        }
         ParallelAnimation {
-
             NumberAnimation {
                 property: "opacity"
                 from: 0
@@ -172,13 +229,23 @@ ListView {
         id: dispTran
         onRunningChanged: {
             if(running) {
-                console.log("addDispTran: " + ViewTransition.targetIndexes)
+//                console.log("addDispTran: " + ViewTransition.targetItems)
             }
         }
         // 如果数据插入太快会导致动画被中断 然后动画控制的属性值无法回到正确的值，在这里手动回到正确的值
-        PropertyAction { property: "opacity"; value: 1;}
+        ScriptAction {
+            script: {
+                let item = dispTran.ViewTransition.item
+                if(root.state === "show") {
+                    item.opacity = 1
+                }
+                if(root.state === "hide" && item.state === "NONEW") {
+                    item.opacity = 0
+                    console.log(item.children)
+                }
+            }
+        }
         PropertyAction { property: "x"; value: (listview.width - dispTran.ViewTransition.item.width) / 2;}
-
 
         NumberAnimation {
             property: "y"
@@ -192,7 +259,7 @@ ListView {
     remove: Transition {
         id: removeTran
         onRunningChanged: {
-            console.log("removeTran: " + ViewTransition.targetIndexes)
+//            console.log("removeTran: " + ViewTransition.targetItems)
         }
         ParallelAnimation {
             NumberAnimation {
@@ -216,7 +283,7 @@ ListView {
     removeDisplaced: Transition {
         id: removeDispTran
         onRunningChanged: {
-            console.log("removeDispTran: " + ViewTransition.targetIndexes)
+//            console.log("removeDispTran: " + ViewTransition.targetItems)
         }
         ParallelAnimation {
             NumberAnimation {
@@ -238,9 +305,50 @@ ListView {
             easing.type: Easing.OutCubic
         }
     }
-
+    // 视图滑块
     ScroolBar.vertical: ScroolBar {
 
+    }
+    /*
+        消息视图显示时 使所有加载项显示
+        消息视图隐藏时 使所有加载项隐藏
+    */
+    Connections {
+        target: root
+        function onStateChanged() {
+            for(let i = 0; i < contentItem.children.length;i++) {
+                let item = contentItem.children[i]
+                if(root.state === "show") {
+                    item.opacity = 1
+                } else if(root.state === "hide"){
+                    item.opacity = 0
+                }
+            }
+        }
+    }
+
+    /*
+        添加延时定时器
+        如果视图隐藏时，只显示新添加的消息
+    */
+    function addDelayHide(item) {
+        if(root.state === "show") return
+
+//        let item = contentItem.children[contentItem.children.length-1]
+        let timer = Qt.createQmlObject("
+                            import QtQml
+                            Timer {}
+        ",item)
+        let callBack = () => {
+            if(root.state === "show") return
+            timer.parent.opacity = 0
+            timer.parent.state = "NONEW"
+            console.log("timer: " + timer.parent)
+        }
+
+        timer.interval = 3000
+        timer.triggered.connect(callBack)
+        timer.start()
     }
 
 }
@@ -331,63 +439,77 @@ Item {
     property real margin: 20
 
     property Component messageItemDelegate: messageDelegate
-    property Component background: Rectangle {
-        anchors.fill: parent
-        color: "#20000000"
-    }
+    property Component background: backgourndCmp
     property ListModel model: ListModel {}
 
     property alias itemsSpacing: messageView.spacing
     property alias count: messageView.count
 
+    signal added()
+    signal removed()
+
     width: 260
     height: 400
 
-    state: "open"
+    state: "show"
     states: [
         State {
-            name: "close"
+            name: "hide"
             PropertyChanges {
-                target: contentItem
+                target: content
                 opacity: 0
                 x: root.width
             }
             PropertyChanges {
-                target: openIcon
+                target: showIcon
                 parent: root
-                anchors.right: contentItem.left
-                anchors.verticalCenter: contentItem.verticalCenter
+                anchors.right: content.left
+                anchors.verticalCenter: content.verticalCenter
+            }
+            PropertyChanges {
+                target: messageView
+                interactive: false
             }
         },
         State {
-            name: "open"
+            name: "show"
             PropertyChanges {
-                target: contentItem
+                target: content
                 opacity: 1
                 x: 0
             }
             PropertyChanges {
-                target: openIcon
+                target: showIcon
                 parent: root
-                anchors.right: contentItem.left
-                anchors.verticalCenter: contentItem.verticalCenter
+                anchors.right: content.left
+                anchors.verticalCenter: content.verticalCenter
+            }
+            PropertyChanges {
+                target: messageView
+                interactive: true
             }
         }
     ]
     transitions: [
         Transition {
-            from: "close"
-            to: "open"
+            from: "hide"
+            to: "show"
             SequentialAnimation {
+                ScriptAction {
+                    script: {
+                        messageView.parent = content
+                        console.log("AA")
+                    }
+                }
                 ParallelAnimation {
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "x"
                         duration: 400
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "opacity"
                         duration: 400
                         easing.type: Easing.InOutQuad
@@ -397,21 +519,27 @@ Item {
 
         },
         Transition {
-            from: "open"
-            to: "close"
+            from: "show"
+            to: "hide"
             SequentialAnimation {
                 ParallelAnimation {
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "x"
                         duration: 400
                         easing.type: Easing.OutCubic
                     }
                     NumberAnimation {
-                        target: contentItem
+                        target: content
                         property: "opacity"
                         duration: 400
                         easing.type: Easing.InOutQuad
+                    }
+                }
+                ScriptAction {
+                    script: {
+                        messageView.parent = root
+                        console.log("AA")
                     }
                 }
             }
@@ -419,13 +547,13 @@ Item {
         }
     ]
 
+
     // 主体内容
     Item {
-        id: contentItem
+        id: content
         z: 0
         width: parent.width
         height: parent.height
-        clip: true
         // 背景加载
         Background {
             id: backgroundLoader
@@ -434,12 +562,11 @@ Item {
         MessageView {
             id: messageView
         }
-
     }
 
     // 打开关闭按钮
     ColorImage {
-        id: openIcon
+        id: showIcon
         z: 4
         width: 20
         height: width
@@ -450,12 +577,21 @@ Item {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                if(root.state === "open") {
-                    root.close()
+                if(root.state === "show") {
+                    root.hide()
                 } else {
-                    root.open()
+                    root.show()
                 }
             }
+        }
+    }
+
+    Component {
+        id: backgourndCmp
+        Rectangle {
+           id: background
+           anchors.fill: parent
+           color: "#2F000000"
         }
     }
 
@@ -463,12 +599,24 @@ Item {
     Component {
         id: messageDelegate
         Rectangle {
+            id: msgItem
             x: (messageView.width - width) / 2
             width: messageView.width - root.margin*2
             height: 80
             radius: 8
+            opacity: 1
+//            visible: opacity
             color: "#2F000000"
             clip: true
+
+            Behavior on opacity {
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 400
+                    easing.type: Easing.InOutQuad
+                }
+            }
+
             Row {
                 width: parent.width - 20
                 height: parent.height - 20
@@ -535,15 +683,16 @@ Item {
                 }
             }
         }
+
     }
 
 
-    function open() {
-        root.state = "open"
+    function show() {
+        root.state = "show"
     }
 
-    function close() {
-        root.state = "close"
+    function hide() {
+        root.state = "hide"
     }
 
     function insert(index,info) {
@@ -555,6 +704,7 @@ Item {
                         message: message,
                         iconSource: iconSource
                      })
+        root.added()
     }
 
     function remove(index,count = 1) {
