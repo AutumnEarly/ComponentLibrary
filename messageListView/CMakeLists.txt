@@ -16,8 +16,11 @@ qt_add_qml_module(appmessageListView
     URI messageListView
     VERSION 1.0
     QML_FILES main.qml
-    QML_FILES MessageQueueView.qml
     RESOURCES resource.qrc
+    QML_FILES messageQueueView/MessageQueueView.qml
+    QML_FILES messageQueueView/resource/MessageView.qml
+    QML_FILES messageQueueView/resource/Background.qml
+    QML_FILES messageQueueView/resource/ScroolBar.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

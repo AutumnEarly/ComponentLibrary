@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import "./messageQueueView"
 
 Window {
     width: 640
@@ -43,15 +44,37 @@ Window {
                         }
                     }
                 }
-                Button {
-                    text: "清空消息"
-                    onClicked: {
-                        messageQueueView.clear()
+                Row {
+                    Button {
+                        text: "清空消息"
+                        onClicked: {
+                            messageQueueView.clear()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.model.clear()
+                        }
                     }
-                    Keys.onReturnPressed: {
-                        messageQueueView.model.clear()
+                    Button {
+                        text: "打开"
+                        onClicked: {
+                            messageQueueView.open()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.open()
+                        }
+                    }
+                    Button {
+                        text: "关闭"
+                        onClicked: {
+                            messageQueueView.close()
+                        }
+                        Keys.onReturnPressed: {
+                            messageQueueView.close()
+                        }
                     }
                 }
+
+
             }
         }
 
@@ -60,6 +83,7 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 20
+
         }
     }
 }
