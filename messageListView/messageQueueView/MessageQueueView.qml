@@ -169,38 +169,26 @@ Item {
                     Text {
                         property real maxHeight: parent.height * 0.3
                         width: parent.width
-                        height: contentHeight
+                        height: maxHeight
                         wrapMode: Text.Wrap
                         elide: Text.ElideRight
                         font.pointSize: 12
                         font.bold: true
                         text: title
                         color: "#FFFFFF"
-                        onContentHeightChanged: (contentHeight) => {
-                            if(contentHeight > maxHeight) {
-                                height = maxHeight
-                            } else {
-                                height = contentHeight
-                            }
-                        }
                     }
                     Text {
                         property real maxHeight: parent.height * 0.7 - parent.spacing
                         width: parent.width
-                        height: contentHeight
+                        height: maxHeight
                         wrapMode: Text.Wrap
-                        font.pointSize: 10
+                        elide: Text.ElideRight
+                        font.pointSize: 9
                         text: message
                         color: "#FFFFFF"
-                        onContentHeightChanged: (contentHeight) => {
-                            if(contentHeight > maxHeight) {
-                                height = maxHeight
-                            } else {
-                                height = contentHeight
-                            }
-                        }
                     }
                 }
+
                 Column { // 工具栏
                     id: toolBar
                     width: 15
@@ -229,9 +217,11 @@ Item {
         }
     }
 
+
     function open() {
         root.state = "open"
     }
+
     function close() {
         root.state = "close"
     }
@@ -246,9 +236,11 @@ Item {
                         iconSource: iconSource
                      })
     }
+
     function remove(index,count = 1) {
         model.remove(index, count)
     }
+
     function clear() {
         model.clear()
     }
