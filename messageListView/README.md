@@ -1,4 +1,3 @@
-
 [TOC]
 
 ## 开发环境
@@ -15,9 +14,30 @@
 
 ![2024-08-21 14-28-39_converted](images/2024-08-21 14-28-39_converted.gif)
 
+## 如何使用
+
+直接导入messageQueueView文件夹即可
+
 ## 代码
 
-代码一共分为两个部分，分别为main.qml 和 MessageQueueView.qml
+这里的代码只包括组件的代码，不包括整个项目的代码。
+
+`结构如下:`
+
+``` txt
+- messageQueueView
+  - resource
+    - Background.qml
+    - MessageView.qml
+    - ScroolBar.qml
+  - MessageQueueView.qml
+```
+
+`Background.qml: ` 消息队列的背景
+
+`MessageView.qml: ` 显示插入的消息
+
+`ScroolBar.qml: ` 滑块
 
 ### main.qml
 
@@ -96,250 +116,198 @@ Window {
 消息列表组件
 
 ``` qml
-// MessageQueueView.qml
-import QtQuick
-import QtQuick.Controls
-Item {
-    id: root
+import QtQuick 2.15
 
-    property real margin: 20
+/*
+    消息视图
+*/
+ListView {
+    id: listview
 
-    property Component messageItemDelegate: messageDelegate
-    property Component background: backgroundCmp
-
-    property alias model: listmodel
-    property alias itemsSpacing: listview.spacing
-    property alias count: listview.count
-
-    width: 260
-    height: 400
+    width: parent.width
+    height: parent.height
+    spacing: 10
+    anchors.horizontalCenter: parent.horizontalCenter
+    verticalLayoutDirection: ListView.BottomToTop
     clip: true
-    Loader {
-        id: backgroundLoader
-        anchors.fill: parent
-        sourceComponent: root.background
-    }
-    Component {
-        id: backgroundCmp
-        Rectangle {
-            id: background
-            anchors.fill: parent
-            color: "#2F000000"
-        }
-    }
+    model: root.model
 
-
-    ListView {
-        id: listview
-        width: parent.width
-        height: parent.height
-        spacing: 10
-        anchors.horizontalCenter: parent.horizontalCenter
-        verticalLayoutDirection: ListView.BottomToTop
-        model: ListModel {
-            id: listmodel
+    delegate: messageItemDelegate
+    // add 添加 过渡动画 因add导致被影响的项
+    add: Transition {
+        id: addTrans
+        onRunningChanged: {
+            console.log("addTran: " + ViewTransition.item)
         }
 
-        delegate: messageItemDelegate
-        // add 添加 过渡动画 因add导致被影响的项
-        add: Transition {
-            id: addTrans
-            onRunningChanged: {
-                console.log("addTran: " + ViewTransition.item)
-            }
-
-            ParallelAnimation {
-
-                NumberAnimation {
-                    property: "opacity"
-                    from: 0
-                    to: 1
-                    duration: 300
-                    easing.type: Easing.InOutQuad
-                }
-                PathAnimation {
-                    duration: 400
-                    easing.type: Easing.InOutQuad
-                    path: Path {
-                        startX: addTrans.ViewTransition.destination.x + 80
-                        startY: addTrans.ViewTransition.destination.y
-                        PathCurve {
-                            x: (listview.width - addTrans.ViewTransition.item.width) / 2
-                            y: addTrans.ViewTransition.destination.y
-                        }
-                    }
-                }
-            }
-
-
-        }
-        // add 添加 过渡动画
-        addDisplaced: Transition {
-            id: dispTran
-            onRunningChanged: {
-                if(running) {
-                    console.log("addDispTran: " + ViewTransition.targetIndexes)
-                }
-            }
-            // 如果数据插入太快会导致动画被中断 然后动画控制的属性值无法回到正确的值，在这里手动回到正确的值
-            PropertyAction { property: "opacity"; value: 1;}
-            PropertyAction { property: "x"; value: (listview.width - dispTran.ViewTransition.item.width) / 2;}
-
+        ParallelAnimation {
 
             NumberAnimation {
-                property: "y"
+                property: "opacity"
+                from: 0
+                to: 1
                 duration: 300
                 easing.type: Easing.InOutQuad
             }
-
-        }
-
-        // remove 移除 过渡动画
-        remove: Transition {
-            id: removeTran
-            onRunningChanged: {
-                console.log("removeTran: " + ViewTransition.targetIndexes)
-            }
-            ParallelAnimation {
-                NumberAnimation {
-                    property: "x"
-                    to: listview.width
-                    duration: 500
-                    easing.type: Easing.InOutQuart
-                }
-                NumberAnimation {
-                    property: "opacity"
-                    from: 1
-                    to: 0
-                    duration: 400
-                    easing.type: Easing.InOutQuart
-                }
-            }
-
-
-        }
-        // remove 移除 过渡动画 因romove导致被影响的项
-        removeDisplaced: Transition {
-            id: removeDispTran
-            onRunningChanged: {
-                console.log("removeDispTran: " + ViewTransition.targetIndexes)
-            }
-            ParallelAnimation {
-                NumberAnimation {
-                    property: "y"
-                    duration: 500
-                    easing.type: Easing.InOutQuart
-                }
-            }
-        }
-
-    }
-
-    Component {
-        id: messageDelegate
-        Rectangle {
-            x: (listview.width - width) / 2
-            width: listview.width - root.margin*2
-            height: 80
-            radius: 8
-            color: "#2F000000"
-            clip: true
-            Row {
-                width: parent.width - 20
-                height: parent.height - 20
-                spacing: 5
-                anchors.centerIn: parent
-                Image {
-                    id: iconImg
-                    width: 35
-                    height: width
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: iconSource
-                }
-                Column {
-                    id: infoText
-                    width: parent.width - iconImg.width - parent.spacing*2 - toolBar.width
-                    height: parent.height
-                    spacing: 5
-                    Text {
-                        property real maxHeight: parent.height * 0.3
-                        width: parent.width
-                        height: contentHeight
-                        wrapMode: Text.Wrap
-                        elide: Text.ElideRight
-                        font.pointSize: 12
-                        font.bold: true
-                        text: title
-                        color: "#FFFFFF"
-                        onContentHeightChanged: (contentHeight) => {
-                            if(contentHeight > maxHeight) {
-                                height = maxHeight
-                            } else {
-                                height = contentHeight
-                            }
-                        }
-                    }
-                    Text {
-                        property real maxHeight: parent.height * 0.7 - parent.spacing
-                        width: parent.width
-                        height: contentHeight
-                        wrapMode: Text.Wrap
-                        font.pointSize: 10
-                        text: message
-                        color: "#FFFFFF"
-                        onContentHeightChanged: (contentHeight) => {
-                            if(contentHeight > maxHeight) {
-                                height = maxHeight
-                            } else {
-                                height = contentHeight
-                            }
-                        }
-                    }
-                }
-                Column {
-                    id: toolBar
-                    width: 15
-                    MouseArea {
-                        width: parent.width
-                        height: width
-                        cursorShape: Qt.PointingHandCursor
-                        Rectangle {
-                            width: parent.width
-                            height: 1
-                            anchors.centerIn: parent
-                            rotation: 45
-                        }
-                        Rectangle {
-                            width: parent.width
-                            height: 1
-                            anchors.centerIn: parent
-                            rotation: -45
-                        }
-                        onClicked: {
-                            remove(index)
-                        }
+            PathAnimation {
+                duration: 400
+                easing.type: Easing.InOutQuad
+                path: Path {
+                    startX: addTrans.ViewTransition.destination.x + 80
+                    startY: addTrans.ViewTransition.destination.y
+                    PathCurve {
+                        x: (listview.width - addTrans.ViewTransition.item.width) / 2
+                        y: addTrans.ViewTransition.destination.y
                     }
                 }
             }
         }
+
+
+    }
+    // add 添加 过渡动画
+    addDisplaced: Transition {
+        id: dispTran
+        onRunningChanged: {
+            if(running) {
+                console.log("addDispTran: " + ViewTransition.targetIndexes)
+            }
+        }
+        // 如果数据插入太快会导致动画被中断 然后动画控制的属性值无法回到正确的值，在这里手动回到正确的值
+        PropertyAction { property: "opacity"; value: 1;}
+        PropertyAction { property: "x"; value: (listview.width - dispTran.ViewTransition.item.width) / 2;}
+
+
+        NumberAnimation {
+            property: "y"
+            duration: 300
+            easing.type: Easing.InOutQuad
+        }
+
     }
 
-    function insert(index,info) {
-        let title = info.title || "标题"
-        let message = info.message || "信息"
-        let iconSource = info.iconSource || "qrc:/images/message.svg"
-        model.insert(index,{
-                        title: title,
-                        message: message,
-                        iconSource: iconSource
-                     })
+    // remove 移除 过渡动画
+    remove: Transition {
+        id: removeTran
+        onRunningChanged: {
+            console.log("removeTran: " + ViewTransition.targetIndexes)
+        }
+        ParallelAnimation {
+            NumberAnimation {
+                property: "x"
+                to: listview.width
+                duration: 400
+                easing.type: Easing.OutQuart
+            }
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: 400
+                easing.type: Easing.InOutQuart
+            }
+        }
+
+
     }
-    function remove(index,count = 1) {
-        model.remove(index, count)
+    // remove 移除 过渡动画 因romove导致被影响的项
+    removeDisplaced: Transition {
+        id: removeDispTran
+        onRunningChanged: {
+            console.log("removeDispTran: " + ViewTransition.targetIndexes)
+        }
+        ParallelAnimation {
+            NumberAnimation {
+                property: "y"
+                duration: 500
+                easing.type: Easing.InOutQuart
+            }
+        }
     }
-    function clear() {
-        model.clear()
+
+    // populate 委托项加载时触发
+    populate: Transition {
+        id: popuTran
+        NumberAnimation {
+            property: "opacity"
+            duration: 300
+            from: 0
+            to: 1
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    ScroolBar.vertical: ScroolBar {
+
+    }
+
+}
+
+
+```
+
+### Background.qml
+
+背景
+
+```qml
+// Background.qml
+import QtQuick 2.15
+/*
+    背景
+*/
+Loader {
+    id: backgroundLoader
+    anchors.fill: parent
+    sourceComponent: root.background
+}
+
+```
+
+### ScroolBar.qml
+
+滑块
+
+``` qml
+// ScrollBar.qml
+import QtQuick 2.12
+import QtQuick.Controls 2.12
+import QtQuick.Controls.impl 2.12
+import QtQuick.Templates 2.12 as T
+
+/*
+    滑动条
+*/
+T.ScrollBar {
+    id: control
+
+    property color handleNormalColor: "#7FFFFFFF"  //按钮颜色
+    property color handleHoverColor: Qt.lighter(handleNormalColor,1.1)
+    property color handlePressColor: Qt.darker(handleNormalColor,1.1)
+
+    property real handleWidth: 10
+    property real handleHeight: 10
+    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
+                            implicitContentWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
+                             implicitContentHeight + topPadding + bottomPadding)
+
+    padding: 1 //背景整体size和handle的间隔
+    visible: control.policy !== T.ScrollBar.AlwaysOff
+
+    contentItem: Rectangle {
+        implicitWidth: control.interactive ? handleWidth : 2
+        implicitHeight: control.interactive ? handleHeight : 2
+
+        radius: width / 2
+        color: if(control.pressed) return handlePressColor
+               else if(control.hovered) return handleHoverColor
+               else return handleNormalColor
+        // 超出显示范围显示滚动条
+        opacity:(control.policy === T.ScrollBar.AlwaysOn || control.size < 1.0)?1.0:0.0
+
     }
 }
+
 ```
 
