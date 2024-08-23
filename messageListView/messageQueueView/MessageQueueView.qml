@@ -6,8 +6,6 @@ import "./resource"
 
 Item {
     id: root
-
-
     property real margin: 20
 
     property Component messageItemDelegate: messageDelegate
@@ -41,6 +39,7 @@ Item {
             PropertyChanges {
                 target: messageView
                 interactive: false
+                contentY: 0
             }
         },
         State {
