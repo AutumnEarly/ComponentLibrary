@@ -1,4 +1,3 @@
-
 [TOC]
 
 ## 开发环境
@@ -16,7 +15,9 @@
 ![2024-08-21 14-28-39_converted](images/2024-08-21 14-28-39_converted.gif)
 
 ## 如何使用
+
 直接导入messageQueueView文件夹即可
+
 ## 代码
 
 这里的代码只包括组件的代码，不包括整个项目的代码。
@@ -434,8 +435,6 @@ import "./resource"
 
 Item {
     id: root
-
-
     property real margin: 20
 
     property Component messageItemDelegate: messageDelegate
@@ -469,6 +468,7 @@ Item {
             PropertyChanges {
                 target: messageView
                 interactive: false
+                contentY: 0
             }
         },
         State {
